@@ -23,6 +23,12 @@ export function LoginForm() {
     if (params.get("registered") === "1") {
       setJustRegistered(true);
     }
+    const err = params.get("error");
+    if (err === "Configuration") {
+      setError(
+        "서버 인증 설정이 비어 있습니다. Vercel 등 배포 환경에 AUTH_SECRET을 설정했는지 확인해 주세요."
+      );
+    }
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -36,7 +42,13 @@ export function LoginForm() {
         redirect: false,
       });
       if (res?.error) {
-        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+        if (res.error === "Configuration") {
+          setError(
+            "서버 인증 설정이 비어 있습니다. 배포 환경 변수 AUTH_SECRET(및 DATABASE_URL)을 확인해 주세요."
+          );
+        } else {
+          setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+        }
         setPending(false);
         return;
       }
