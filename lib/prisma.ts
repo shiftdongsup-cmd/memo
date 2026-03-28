@@ -1,5 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 
+if (!process.env.DATABASE_URL?.trim()) {
+  const fromProvider =
+    process.env.POSTGRES_PRISMA_URL?.trim() ||
+    process.env.POSTGRES_URL?.trim() ||
+    process.env.PRISMA_DATABASE_URL?.trim();
+  if (fromProvider) {
+    process.env.DATABASE_URL = fromProvider;
+  }
+}
+
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient();

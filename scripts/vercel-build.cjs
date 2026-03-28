@@ -4,6 +4,17 @@
 
 const { execSync } = require("node:child_process");
 
+function applyDatabaseUrlAliases() {
+  if (process.env.DATABASE_URL?.trim()) return;
+  const fromProvider =
+    process.env.POSTGRES_PRISMA_URL?.trim() ||
+    process.env.POSTGRES_URL?.trim() ||
+    process.env.PRISMA_DATABASE_URL?.trim();
+  if (fromProvider) {
+    process.env.DATABASE_URL = fromProvider;
+  }
+}
+
 const migrateFailHint = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  prisma migrate deploy 실패 (위쪽에 Prisma 오류가 더 있습니다)                  ║
@@ -29,18 +40,26 @@ console.log(`
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `);
 
+applyDatabaseUrlAliases();
 const dbUrl = process.env.DATABASE_URL?.trim();
+
 if (!dbUrl) {
   console.error(`
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  BUILD FAILED: DATABASE_URL 이 비어 있습니다                                  ║
+║  BUILD FAILED: PostgreSQL 연결 문자열이 없습니다                               ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Vercel → Project → Settings → Environment Variables                         ║
+║  Vercel → 이 프로젝트 → Settings → Environment Variables                     ║
 ║                                                                              ║
-║  • DATABASE_URL 추가 (PostgreSQL)                                            ║
-║    예: postgresql://USER:PASS@HOST/db?sslmode=require                        ║
+║  아래 중 하나를 추가하세요 (이름 그대로):                                      ║
+║    • DATABASE_URL = postgresql://USER:PASS@HOST/db?sslmode=require          ║
+║    또는 Vercel Storage → Postgres 연동 시 자동으로 생기는:                    ║
+║    • POSTGRES_PRISMA_URL  또는  POSTGRES_URL                                 ║
 ║                                                                              ║
-║  • 변수가 빌드에도 적용되도록 Production(및 Preview)에 설정 후 Redeploy        ║
+║  체크리스트:                                                                  ║
+║    1) Environment: Production (및 Preview 쓰면 Preview도) 선택               ║
+║    2) 저장 후 반드시 Redeploy (새 빌드에서만 변수가 주입됨)                    ║
+║                                                                              ║
+║  Neon 무료 DB: https://neon.tech → 연결 문자열 복사 → DATABASE_URL에 붙여넣기 ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `);
   process.exit(1);
@@ -49,7 +68,7 @@ if (!dbUrl) {
 if (!dbUrl.startsWith("postgres")) {
   console.error(`
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  BUILD FAILED: DATABASE_URL 이 PostgreSQL 형식이 아닙니다                      ║
+║  BUILD FAILED: DB URL이 PostgreSQL 형식이 아닙니다                            ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  URL은 postgresql:// 또는 postgres:// 로 시작해야 합니다.                     ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
